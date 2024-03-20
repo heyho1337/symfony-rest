@@ -13,7 +13,7 @@ class ApiController extends AbstractController{
    
 	#[Route('/{type}', name: 'api_list')]
     public function index(EntityManagerInterface $entityManager, string $type): JsonResponse{
-		
+
 		$entityClass = 'App\Entity\\' . ucfirst($type);
 		if (!class_exists($entityClass)) {
             return $this->json("Entity class {$type} does not exist.", 404);
@@ -41,24 +41,30 @@ class ApiController extends AbstractController{
 			return $this->json("Entity class {$type} does not exist.", 404);
 		}
 
-		$parts = explode('=', $data);
-		if (count($parts) !== 2) {
-			return $this->json("Invalid data format provided.", 400);
+		$pairs = explode('&', $data);
+		$jsonData = [];
+		
+		foreach ($pairs as $pair) {
+			$parts = explode('=', $pair, 2);
+			$paramName = urldecode($parts[0]);
+			$paramValue = urldecode($parts[1] ?? '');
+			$jsonData[$paramName] = $paramValue;
 		}
 
-		$paramName = urldecode($parts[0]);
-		$paramValue = urldecode($parts[1]);
+		$rows = $entityManager->getRepository($entityClass)->findBy($jsonData);
 
-		// Build the query array with the extracted parameter
-		$jsonData = [$paramName => $paramValue];
-
-		$row = $entityManager->getRepository($entityClass)->findOneBy($jsonData);
-
-		if (!$row) {
-			return $this->json("No {$type} found for {$paramName} '{$paramValue}'.", 404);
+		if (!$rows) {
+			$paramsString = implode(', ', array_map(function ($key, $value) {
+				return "$key '$value'";
+			}, array_keys($jsonData), $jsonData));
+			return $this->json("No {$type} found for {$paramsString}.", 404);
 		}
 
-		$data = $this->setData($row);
+		$data = [];
+    
+        foreach ($rows as $row) {
+			$data[] = $this->setData($row);
+        }
 			
 		return $this->json($data);
 	}
