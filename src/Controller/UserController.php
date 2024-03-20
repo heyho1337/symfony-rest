@@ -12,11 +12,24 @@ use App\Entity\User;
 #[Route('/api', name: 'api_')]
 class UserController extends AbstractController{
     #[Route('/user', name: 'app_user')]
-    public function index(): JsonResponse{
-        return $this->json([
-            'message' => 'Welcome to your new controller!',
-            'path' => 'src/Controller/UserController.php',
-        ]);
+    public function index(EntityManagerInterface $entityManager): JsonResponse{
+        $users = $entityManager
+            ->getRepository(User::class)
+            ->findAll();
+    
+        $data = [];
+    
+        foreach ($users as $user) {
+			$data[] =  [
+				'id' => $user->getId(),
+				'user_name' => $user->getUserName(),
+				'user_email' => $user->getUserEmail(),
+				'active_league' => $user->getActiveLeague(),
+				'leagueId' => $user->getLeagueId()
+			];
+        }
+    
+        return $this->json($data);
     }
 
 	#[Route('/user/{id}', name: 'user_show', methods:['get'] )]
