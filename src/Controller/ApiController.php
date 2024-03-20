@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Attribute\Route;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+#[Route('/api', name: 'api_')]
+class ApiController extends AbstractController{
+   
+	#[Route('/{type}', name: 'api_list')]
+    public function index(EntityManagerInterface $entityManager, string $type): JsonResponse{
+		
+		$entityClass = 'App\Entity\\' . ucfirst($type);
+		if (!class_exists($entityClass)) {
+            return $this->json("Entity class {$type} does not exist.", 404);
+        }
+		
+		$rows = $entityManager
+            ->getRepository($entityClass)
+            ->findAll();
+    
+        $data = [];
+    
+        foreach ($rows as $row) {
+			$data[] = $this->setData($row);
+        }
+    
+        return $this->json($data);
+    }
+	
+	#[Route('/{type}/{id_name}/{id}', name: 'api_show', methods:['get'] )]
+    public function show(EntityManagerInterface $entityManager, string $type, string $id_name, string $id): JsonResponse{
+		
+		$entityClass = 'App\Entity\\' . ucfirst($type);
+
+		if (!class_exists($entityClass)) {
+            return $this->json("Entity class {$type} does not exist.", 404);
+        }
+
+		$row = $entityManager->getRepository($entityClass)->findOneBy([$id_name => $id]);
+    
+        if (!$row) {
+    
+            return $this->json('No {$type} found for id ' . $id, 404);
+        }
+    
+        $data = $this->setData($row);
+            
+        return $this->json($data);
+    }
+
+	#[Route('/{type}', name: 'api_create', methods: ['POST'])]
+	public function create(EntityManagerInterface $entityManager, Request $request, string $type): JsonResponse{
+		$entityClass = 'App\Entity\\' . ucfirst($type);
+
+		if (!class_exists($entityClass)) {
+			return $this->json("Entity class {$type} does not exist.", 404);
+		}
+
+		$row = new $entityClass();
+		$reflectionClass = new \ReflectionClass($entityClass);
+		$methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+
+		foreach ($methods as $method) {
+			if (strpos($method->name, 'set') === 0) {
+				$propertyName = lcfirst(substr($method->name, 3));
+				$value = $request->request->get($propertyName);
+
+				if ($value !== null) {
+					$parameters = $method->getParameters();
+					if (count($parameters) === 1) {
+						$parameterType = $parameters[0]->getType();
+						if ($parameterType !== null) {
+							$parameterTypeName = $parameterType->getName();
+							settype($value, $parameterTypeName);
+						}
+					}
+					$row->{$method->name}($value);
+				}
+			}
+		}
+
+		$entityManager->persist($row);
+		$entityManager->flush();
+
+		$data = $this->setData($row);
+
+		return $this->json($data);
+	}
+
+	protected function setData($row){
+        $data = [];
+        $reflectionClass = new \ReflectionClass($row);
+        $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+
+        foreach ($methods as $method) {
+            if (strpos($method->name, 'get') === 0) {
+                $propertyName = lcfirst(substr($method->name, 3));
+                $data[$propertyName] = $method->invoke($row);
+            }
+        }
+
+        return $data;
+    }
+}
