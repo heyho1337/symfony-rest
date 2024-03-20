@@ -42,7 +42,7 @@ class Leagues
         return $this;
     }
 
-    public function isFull(): ?bool
+    public function getFull(): ?bool
     {
         return $this->full;
     }
