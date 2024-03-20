@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[Route('/api', name: 'api_')]
 class ApiController extends AbstractController{
    
-	#[Route('/{type}', name: 'api_list')]
+	#[Route('/list/{type}', name: 'api_list')]
     public function index(EntityManagerInterface $entityManager, string $type): JsonResponse{
 
 		$entityClass = 'App\Entity\\' . ucfirst($type);
@@ -32,7 +32,7 @@ class ApiController extends AbstractController{
         return $this->json($data);
     }
 	
-	#[Route('/{type}/{data}', name: 'api_show', methods:['get'] )]
+	#[Route('/get/{type}/{data}', name: 'api_show', methods:['get'] )]
 	public function show(EntityManagerInterface $entityManager, string $type, string $data): JsonResponse{
 		
 		$entityClass = 'App\Entity\\' . ucfirst($type);
@@ -69,7 +69,7 @@ class ApiController extends AbstractController{
 		return $this->json($data);
 	}
 
-	#[Route('/{type}', name: 'api_create', methods: ['POST'])]
+	#[Route('/set/{type}', name: 'api_create', methods: ['POST'])]
 	public function create(EntityManagerInterface $entityManager, Request $request, string $type): JsonResponse{
 		$entityClass = 'App\Entity\\' . ucfirst($type);
 
@@ -80,23 +80,32 @@ class ApiController extends AbstractController{
 		$row = new $entityClass();
 		$reflectionClass = new \ReflectionClass($entityClass);
 		$methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+		$leagueId = $this->randomPassword(20);
+		$requestData = json_decode($request->getContent(), true);
+		if ($requestData === null) {
+			return $this->json('Invalid JSON data provided', 400);
+		}
+		if($type === 'leagues'){
+			$requestData['leagueId'] = $leagueId;
+		}
 
 		foreach ($methods as $method) {
 			if (strpos($method->name, 'set') === 0) {
 				$propertyName = lcfirst(substr($method->name, 3));
-				$value = $request->request->get($propertyName);
-
-				if ($value !== null) {
-					$parameters = $method->getParameters();
-					if (count($parameters) === 1) {
-						$parameterType = $parameters[0]->getType();
-						if ($parameterType !== null) {
-							$parameterTypeName = $parameterType->getName();
-							settype($value, $parameterTypeName);
-						}
-					}
-					$row->{$method->name}($value);
+				$value = $requestData[$propertyName];
+				if($value === '' || $value === ' ' || $value === NULL || $value === 'NULL'){
+					$value = $leagueId;
 				}
+				
+				$parameters = $method->getParameters();
+				if (count($parameters) === 1) {
+					$parameterType = $parameters[0]->getType();
+					if ($parameterType !== null) {
+						$parameterTypeName = $parameterType->getName();
+						settype($value, $parameterTypeName);
+					}
+				}
+				$row->{$method->name}($value);
 			}
 		}
 
@@ -104,25 +113,42 @@ class ApiController extends AbstractController{
 		$entityManager->flush();
 
 		$data = $this->setData($row);
+		if($type === 'leagues'){
+			$data['id'] = $leagueId;
+		}
 
 		return $this->json($data);
 	}
 
-	#[Route('/{type}/{id_name}/{id}', name: 'api_update', methods:['PUT', 'PATCH'] )]
-	public function update(EntityManagerInterface $entityManager, Request $request, string $type, string $id_name, string $id): JsonResponse{
+	#[Route('/change/{type}/{data}', name: 'api_update', methods:['PUT', 'PATCH'] )]
+	public function update(EntityManagerInterface $entityManager, Request $request, string $type, string $data): JsonResponse{
 		$entityClass = 'App\Entity\\' . ucfirst($type);
 
 		if (!class_exists($entityClass)) {
 			return $this->json("Entity class {$type} does not exist.", 404);
 		}
 
-		$entity = $entityManager->getRepository($entityClass)->findOneBy([$id_name => $id]);
-
-		if (!$entity) {
-			return $this->json("No {$type} found for {$id_name} {$id}", 404);
+		$pairs = explode('&', $data);
+		$jsonData = [];
+		
+		foreach ($pairs as $pair) {
+			$parts = explode('=', $pair, 2);
+			$paramName = urldecode($parts[0]);
+			$paramValue = urldecode($parts[1] ?? '');
+			$jsonData[$paramName] = $paramValue;
 		}
 
-		$requestData = $request->request->all();
+		$entity = $entityManager->getRepository($entityClass)->findOneBy($jsonData);
+
+
+		if (!$entity) {
+			return $this->json("No {$type} found", 404);
+		}
+
+		$requestData = json_decode($request->getContent(), true);
+		if ($requestData === null) {
+			return $this->json('Invalid JSON data provided', 400);
+		}
 
 		$reflectionClass = new \ReflectionClass($entityClass);
 		$methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
@@ -132,6 +158,9 @@ class ApiController extends AbstractController{
 				$propertyName = lcfirst(substr($method->name, 3));
 				if (isset($requestData[$propertyName])) {
 					$value = $requestData[$propertyName];
+					if (is_array($value)) {
+						$value = '{'.implode(',', $value).'}';
+					}
 					$parameters = $method->getParameters();
 					if (count($parameters) === 1) {
 						$parameterType = $parameters[0]->getType();
@@ -166,4 +195,23 @@ class ApiController extends AbstractController{
 
         return $data;
     }
+
+	/**
+	 * generating random characters
+	 * @param int $length character's length
+	 * @return string the random characther chain 
+	*/
+	function randomPassword($length) {  
+		$possibleCharacters = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";  
+		$characterLength = strlen($possibleCharacters);  
+		$password = "";  
+		
+		for ($i = 0; $i < $length; $i++) {  
+			$character = $possibleCharacters[rand(0, $characterLength - 1)];  
+			$password .= $character;  
+		}  
+		
+		return $password;  
+	}
+
 }
