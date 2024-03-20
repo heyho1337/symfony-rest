@@ -20,15 +20,26 @@ class UserController extends AbstractController{
         $data = [];
     
         foreach ($users as $user) {
-			$data[] =  [
-				'id' => $user->getId(),
-				'user_name' => $user->getUserName(),
-				'user_email' => $user->getUserEmail(),
-				'active_league' => $user->getActiveLeague(),
-				'leagueId' => $user->getLeagueId()
-			];
+			$data[] = $this->setData($user);
         }
     
+        return $this->json($data);
+    }
+
+	#[Route('/user', name: 'user_create', methods:['post'] )]
+	public function create(EntityManagerInterface $entityManager, Request $request): JsonResponse
+    {
+        $user = new User();
+        $user->setUserName($request->request->get('user_name'));
+        $user->setUserEmail($request->request->get('user_email'));
+		$user->setActiveLeague($request->request->get('active_league'));
+		$user->setLeagueId($request->request->get('leagueId'));
+    
+        $entityManager->persist($user);
+        $entityManager->flush();
+    
+        $data = $this->setData($user);
+            
         return $this->json($data);
     }
 
@@ -41,14 +52,18 @@ class UserController extends AbstractController{
             return $this->json('No user found for id ' . $id, 404);
         }
     
-        $data =  [
+        $data = $this->setData($user);
+            
+        return $this->json($data);
+    }
+
+	protected function setData($user){
+		return [
             'id' => $user->getId(),
             'user_name' => $user->getUserName(),
             'user_email' => $user->getUserEmail(),
 			'active_league' => $user->getActiveLeague(),
 			'leagueId' => $user->getLeagueId()
         ];
-            
-        return $this->json($data);
-    }
+	}
 }

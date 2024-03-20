@@ -22,15 +22,26 @@ class TeamsController extends AbstractController{
         $data = [];
     
         foreach ($teams as $team) {
-			$data[] = [
-				'id' => $team->getId(),
-				'account_id' => $team->getAccountId(),
-				'teams_id' => $team->getTeamsId(),
-				'league_id' => $team->getLeagueId(),
-				'user_email' => $team->getUserEmail()
-			];
+			$data[] = $this->setData($team);
         }
     
+        return $this->json($data);
+    }
+
+	#[Route('/teams', name: 'teams_create', methods:['post'] )]
+	public function create(EntityManagerInterface $entityManager, Request $request): JsonResponse
+    {
+        $team = new Teams();
+        $team->setAccountId($request->request->get('account_id'));
+        $team->setTeamsId($request->request->get('teams_id'));
+		$team->setLeagueId($request->request->get('league_id'));
+		$team->setUserEmail($request->request->get('user_email'));
+    
+        $entityManager->persist($team);
+        $entityManager->flush();
+    
+        $data = $this->setData($team);
+            
         return $this->json($data);
     }
 
@@ -42,14 +53,18 @@ class TeamsController extends AbstractController{
 			return $this->json('No team found for teamsId ' . $teamsId, 404);
 		}
 
-		$data = [
-			'id' => $team->getId(),
+		$data = $this->setData($team);
+
+		return $this->json($data);
+	}
+
+	protected function setData($team){
+		return [
+            'id' => $team->getId(),
 			'account_id' => $team->getAccountId(),
 			'teams_id' => $team->getTeamsId(),
 			'league_id' => $team->getLeagueId(),
 			'user_email' => $team->getUserEmail()
-		];
-
-		return $this->json($data);
+        ];
 	}
 }

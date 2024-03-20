@@ -21,15 +21,26 @@ class LeaguesController extends AbstractController{
         $data = [];
     
         foreach ($leagues as $league) {
-			$data[] = [
-				'id' => $league->getId(),
-				'league_id' => $league->getLeagueId(),
-				'active' => $league->getActive(),
-				'full' => $league->isFull(),
-				'name' => $league->getName()
-			];
+			$data[] = $this->setData($league);
         }
     
+        return $this->json($data);
+    }
+
+	#[Route('/leagues', name: 'leagues_create', methods:['post'] )]
+	public function create(EntityManagerInterface $entityManager, Request $request): JsonResponse
+    {
+        $league = new Leagues();
+        $league->setLeagueId($request->request->get('league_id'));
+        $league->setActive($request->request->get('active'));
+		$league->setFull($request->request->get('full'));
+		$league->setName($request->request->get('name'));
+    
+        $entityManager->persist($league);
+        $entityManager->flush();
+    
+        $data = $this->setData($league);
+            
         return $this->json($data);
     }
 
@@ -41,14 +52,18 @@ class LeaguesController extends AbstractController{
 			return $this->json('No league found for leagueId ' . $leagueId, 404);
 		}
 
-		$data = [
-			'id' => $league->getId(),
+		$data = $this->setData($league);
+
+		return $this->json($data);
+	}
+
+	protected function setData($league){
+		return [
+            'id' => $league->getId(),
 			'league_id' => $league->getLeagueId(),
 			'active' => $league->getActive(),
 			'full' => $league->isFull(),
 			'name' => $league->getName()
-		];
-
-		return $this->json($data);
+        ];
 	}
 }
