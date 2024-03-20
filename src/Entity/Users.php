@@ -2,11 +2,11 @@
 
 namespace App\Entity;
 
-use App\Repository\UserRepository;
+use App\Repository\UsersRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: UserRepository::class)]
-class User
+#[ORM\Entity(repositoryClass: UsersRepository::class)]
+class Users
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -30,7 +30,7 @@ class User
         return $this->id;
     }
 
-    public function getUserName(): ?string
+    public function getUser_name(): ?string
     {
         return $this->user_name;
     }
@@ -42,7 +42,7 @@ class User
         return $this;
     }
 
-    public function getUserEmail(): ?string
+    public function getUser_email(): ?string
     {
         return $this->user_email;
     }
@@ -54,7 +54,7 @@ class User
         return $this;
     }
 
-    public function getActiveLeague(): ?string
+    public function getActive_league(): ?string
     {
         return $this->active_league;
     }

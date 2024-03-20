@@ -32,26 +32,36 @@ class ApiController extends AbstractController{
         return $this->json($data);
     }
 	
-	#[Route('/{type}/{id_name}/{id}', name: 'api_show', methods:['get'] )]
-    public function show(EntityManagerInterface $entityManager, string $type, string $id_name, string $id): JsonResponse{
+	#[Route('/{type}/{data}', name: 'api_show', methods:['get'] )]
+	public function show(EntityManagerInterface $entityManager, string $type, string $data): JsonResponse{
 		
 		$entityClass = 'App\Entity\\' . ucfirst($type);
 
 		if (!class_exists($entityClass)) {
-            return $this->json("Entity class {$type} does not exist.", 404);
-        }
+			return $this->json("Entity class {$type} does not exist.", 404);
+		}
 
-		$row = $entityManager->getRepository($entityClass)->findOneBy([$id_name => $id]);
-    
-        if (!$row) {
-    
-            return $this->json('No {$type} found for id ' . $id, 404);
-        }
-    
-        $data = $this->setData($row);
-            
-        return $this->json($data);
-    }
+		$parts = explode('=', $data);
+		if (count($parts) !== 2) {
+			return $this->json("Invalid data format provided.", 400);
+		}
+
+		$paramName = urldecode($parts[0]);
+		$paramValue = urldecode($parts[1]);
+
+		// Build the query array with the extracted parameter
+		$jsonData = [$paramName => $paramValue];
+
+		$row = $entityManager->getRepository($entityClass)->findOneBy($jsonData);
+
+		if (!$row) {
+			return $this->json("No {$type} found for {$paramName} '{$paramValue}'.", 404);
+		}
+
+		$data = $this->setData($row);
+			
+		return $this->json($data);
+	}
 
 	#[Route('/{type}', name: 'api_create', methods: ['POST'])]
 	public function create(EntityManagerInterface $entityManager, Request $request, string $type): JsonResponse{

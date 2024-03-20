@@ -30,7 +30,7 @@ class Teams
         return $this->id;
     }
 
-    public function getTeamsId(): ?string
+    public function getTeams_id(): ?string
     {
         return $this->teams_id;
     }
@@ -42,7 +42,7 @@ class Teams
         return $this;
     }
 
-    public function getAccountId(): ?string
+    public function getAccount_id(): ?string
     {
         return $this->account_id;
     }
@@ -54,7 +54,7 @@ class Teams
         return $this;
     }
 
-    public function getLeagueId(): ?string
+    public function getLeague_id(): ?string
     {
         return $this->league_id;
     }
@@ -71,7 +71,7 @@ class Teams
         return $this->user_email;
     }
 
-    public function setUserEmail(string $user_email): static
+    public function setUser_email(string $user_email): static
     {
         $this->user_email = $user_email;
 
