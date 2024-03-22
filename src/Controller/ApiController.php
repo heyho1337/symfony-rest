@@ -187,7 +187,7 @@ class ApiController extends AbstractController{
         $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC);
 
         foreach ($methods as $method) {
-            if (strpos($method->name, 'get') === 0) {
+            if (str_contains($method->name, 'get')) {
                 $propertyName = lcfirst(substr($method->name, 3));
                 $data[$propertyName] = $method->invoke($row);
             }
@@ -201,7 +201,7 @@ class ApiController extends AbstractController{
 	 * @param int $length character's length
 	 * @return string the random characther chain 
 	*/
-	function randomPassword($length) {  
+	protected function randomPassword($length) {  
 		$possibleCharacters = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";  
 		$characterLength = strlen($possibleCharacters);  
 		$password = "";  
